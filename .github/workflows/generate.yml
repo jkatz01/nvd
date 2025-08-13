@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch: # Manual
+    inputs:
+      clean:
+        description: 'Download fresh feeds from MSRC. Any value other than "false" will trigger a clean download'
+        required: true
+        default: 'false'
 
 permissions:
   contents: write
@@ -21,9 +26,9 @@ jobs:
       - name: Checkout Fleet
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
-          repository: fleetdm/fleet
+          repository: jkatz01/fleet
           fetch-depth: 1
-          ref: main
+          ref: 31474_msrc_error_remove
           token: ${{ github.token }}
           path: fleet
 
@@ -89,7 +94,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "<!subteam^S086VL144TU>, security artifacts generation result: ${{ job.status }}\nhttps://github.com/fleetdm/nvd/actions/runs/${{  github.run_id }}\n${{ github.event.pull_request.html_url || github.event.head.html_url }}"
+                    "text": "<!subteam^S086VL144TU>, security artifacts generation result: ${{ job.status }}\nhttps://github.com/jkatz01/nvd/actions/runs/${{  github.run_id }}\n${{ github.event.pull_request.html_url || github.event.head.html_url }}"
                   }
                 }
               ]
@@ -97,3 +102,4 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_G_HELP_P1_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          MSRC_CLEAN: ${{ github.event.inputs.clean || 'false' }}
