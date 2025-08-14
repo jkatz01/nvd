@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 env:
-  MSRC_CLEAN: ${{ github.event.inputs.clean && 'true' || 'false' }}
+  MSRC_CLEAN: ${{ github.event.inputs.clean == 'true' && 'true' || 'false' }}
 
 jobs:
   security_artifacts:
