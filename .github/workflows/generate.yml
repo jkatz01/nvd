@@ -1,21 +1,17 @@
 on:
-  push:
-    branches:
-      - master
-  schedule:
-    - cron: "0 0 * * *"
   workflow_dispatch: # Manual
     inputs:
       clean:
         description: 'Download fresh feeds from MSRC. Any value other than "false" will trigger a clean download'
         required: true
-        default: 'false'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 env:
-  MSRC_CLEAN: ${{ github.event.inputs.clean || 'false' }}
+  MSRC_CLEAN: ${{ github.event.inputs.clean && 'true' || 'false' }}
 
 jobs:
   security_artifacts:
@@ -29,9 +25,9 @@ jobs:
       - name: Checkout Fleet
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
-          repository: fleetdm/fleet
+          repository: jkatz01/fleet
           fetch-depth: 1
-          ref: main
+          ref: 31474_msrc_error_remove
           token: ${{ github.token }}
           path: fleet
 
@@ -43,21 +39,8 @@ jobs:
       - name: Generate security artifacts
         run: |
           cd fleet
-          export NVD_API_KEY=${{ secrets.NVD_API_KEY }}
-          export NETWORK_TEST_GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          go run -tags fts5 cmd/cpe/generate.go
           go run cmd/msrc/generate.go
           go run cmd/macoffice/generate.go
-
-      - name: Validate NVD feeds
-        run: |
-          mkdir -p cpe_files
-          cp fleet/server/vulnerabilities/nvd/cpe_translations.json cpe_files/
-          cp fleet/*.sqlite.gz cpe_files/
-          cp fleet/msrc_out/*.json cpe_files/
-          cp fleet/macoffice_rel_notes/*.json cpe_files/
-          cd fleet
-          go run cmd/cpe/validate/main.go --db_dir ../cpe_files
 
       - name: Current date
         id: date
@@ -78,30 +61,12 @@ jobs:
         with:
           files: |
             fleet/*.sqlite.gz
-            fleet/server/vulnerabilities/nvd/cpe_translations.json
             fleet/msrc_out/*.json
             fleet/macoffice_rel_notes/*.json
           tag_name: ${{ steps.date.outputs.date }}
           target_commitish: release
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Slack Notification
-        if: failure()
-        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 # v1.24.0
-        with:
-          payload: |
-            {
-              "text": "${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head.html_url }}",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "<!subteam^S086VL144TU>, security artifacts generation result: ${{ job.status }}\nhttps://github.com/fleetdm/nvd/actions/runs/${{  github.run_id }}\n${{ github.event.pull_request.html_url || github.event.head.html_url }}"
-                  }
-                }
-              ]
-            }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_G_HELP_P1_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
