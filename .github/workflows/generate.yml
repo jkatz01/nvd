@@ -27,7 +27,7 @@ jobs:
         with:
           repository: jkatz01/fleet
           fetch-depth: 1
-          ref: 31474_msrc_error_remove
+          ref: temp
           token: ${{ github.token }}
           path: fleet
 
